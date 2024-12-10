@@ -1,0 +1,48 @@
+trigger:
+  branches:
+    include:
+      - main  # Trigger the pipeline on push to the main branch
+
+schedules:
+  - cron: "0 17 * * *"
+    displayName: Daily Pipeline Trigger
+    branches:
+      include:
+        - main
+    always: true  # Always run the schedule even if there are no code changes
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: RunStreamlit
+  displayName: Run Streamlit App
+
+  steps:
+    # Checkout the repository
+    - checkout: self  # Simplified checkout task
+
+    # Setting up Python environment
+    - task: UsePythonVersion@0
+      displayName: Set up Python 3.x
+      inputs:
+        versionSpec: '3.8'  # Use Python 3.x
+        addToPath: true
+
+    # Installing dependencies
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: Install Dependencies
+
+    # Run the Streamlit app and store logs
+    - script: |
+        nohup streamlit run app.py > streamlit_log.txt 2>&1 &
+      displayName: Run Streamlit App
+
+    # Publish logs to pipeline artifacts
+    - task: PublishPipelineArtifact@1
+      displayName: Upload Streamlit Log File
+      inputs:
+        targetPath: streamlit_log.txt
+        artifactName: streamlit-logs
